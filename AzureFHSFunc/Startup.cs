@@ -19,6 +19,8 @@ namespace AzureFHSFunc
 
             builder.Services.AddDbContext<AzureFHSDbContext>(options => options.UseSqlServer(connectionString));
 
+            
+
             builder.Services.BuildServiceProvider();
         }
     }

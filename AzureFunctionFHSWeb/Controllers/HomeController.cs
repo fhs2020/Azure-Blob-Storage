@@ -1,4 +1,7 @@
-﻿using AzureFunctionFHSWeb.Models;
+﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+
+using AzureFunctionFHSWeb.Models;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,10 +15,12 @@ namespace AzureFunctionFHSWeb.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         static readonly HttpClient _httpClient = new HttpClient();
+        private readonly BlobServiceClient _blobServiceClient;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, BlobServiceClient blobServiceClient)
         {
             _logger = logger;
+            _blobServiceClient = blobServiceClient;
         }
 
         public IActionResult Index()
@@ -28,7 +33,7 @@ namespace AzureFunctionFHSWeb.Controllers
         // http://localhost:7071/api/OnSalesUploadWriteToQueue
 
         [HttpPost]
-        public async Task<IActionResult> Index(SalesRequest salesRequest)
+        public async Task<IActionResult> Index(SalesRequest salesRequest, IFormFile file)
         {
             salesRequest.Id = Guid.NewGuid().ToString();
 
@@ -41,6 +46,22 @@ namespace AzureFunctionFHSWeb.Controllers
                 string returnValue = response.Content.ReadAsStringAsync().Result;
             };
 
+
+            if (file != null)
+            {
+                var fileName = salesRequest.Id + Path.GetExtension(file.FileName);
+                BlobContainerClient blobContainerClient = _blobServiceClient.GetBlobContainerClient("functionsalesrep");
+                var blobClient = blobContainerClient.GetBlobClient(fileName);
+
+                var httpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = file.ContentType
+
+                };
+
+                await blobClient.UploadAsync(file.OpenReadStream(), httpHeaders);
+                return View();
+            }
 
             return RedirectToAction(nameof(Index));
         }
